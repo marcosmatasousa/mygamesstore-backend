@@ -22,7 +22,7 @@ app.use(
 const PORT = process.env.PORT || 3000;
 app.use(
   cors({
-    origin: "http://localhost:5173",
+    origin: "*",
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type"],
     credentials: true,
@@ -32,7 +32,9 @@ app.use(
 app.use(express.json());
 app.use(router);
 
-const dbURI = process.env.MONGODB_URI;
+const dbURI =
+  process.env.MONGODB_URI ||
+  "mongodb+srv://marcosdamata2000:Ma%40r32452765@cluster0.x9x2k.mongodb.net/games?retryWrites=true&w=majority";
 
 mongoose
   .connect(dbURI)
