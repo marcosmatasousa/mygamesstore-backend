@@ -22,7 +22,7 @@ app.use(
 const PORT = process.env.PORT || 3000;
 app.use(
   cors({
-    origin: "*",
+    origin: "http://localhost:3000",
     methods: ["GET", "POST", "DELETE"],
     allowedHeaders: ["Content-Type"],
     credentials: true,
