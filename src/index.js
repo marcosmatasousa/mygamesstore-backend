@@ -24,10 +24,14 @@ app.use(
     saveUninitialized: true,
     cookie: {
       maxAge: SESSION_LIFETIME,
+      httpOnly: true,
+      sameSite: "None",
     },
     store: MongoStore.create({
       client: mongoose.connection.getClient(),
       stringify: false,
+      autoRemove: "interval",
+      autoRemoveInterval: 10,
     }),
   })
 );
