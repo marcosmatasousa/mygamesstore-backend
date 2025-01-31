@@ -1,17 +1,20 @@
 import express from "express";
 import { Game } from "../mongoose/schemas/gameSchema.js";
+import { Session } from "../mongoose/schemas/sessionSchema.js";
 
 const cartRouter = express();
 
-cartRouter.use((request, response, next) => {
-  if (!request.session.cart) {
-    request.session.cart = [];
+cartRouter.get("/api/cart", async (request, response) => {
+  const { sessionID } = request;
+  try {
+    const sessionData = await Session.findById(sessionID);
+    if (!sessionData)
+      return response.status(404).send({ message: "Invalid session data" });
+    const { cart } = sessionData.session;
+    return response.send(cart);
+  } catch (error) {
+    return response.status(500).send({ message: error });
   }
-  next();
-});
-
-cartRouter.get("/api/cart", (request, response) => {
-  return response.send(request.session.cart);
 });
 
 cartRouter.post("/api/cart", async (request, response) => {
@@ -19,33 +22,59 @@ cartRouter.post("/api/cart", async (request, response) => {
     const { id } = request.body;
     const item = await Game.findById(id);
     if (!item)
-      return response.status(404).send({ msg: "could not find the game" });
-    request.session.cart.push(item);
-    return response.send(request.session.cart);
+      return response.status(404).send({ msg: "Invalid session data" });
+    try {
+      const { sessionID } = request;
+      await Session.updateOne(
+        { _id: sessionID },
+        { $push: { "session.cart": item } }
+      );
+      return response.sendStatus(200);
+    } catch (error) {
+      console.log(error);
+    }
   } catch (err) {
     console.log(err);
   }
 });
 
-cartRouter.get("/api/cart/count", (request, response) => {
-  return response.send({ items: request.session.cart.length });
+cartRouter.get("/api/cart/count", async (request, response) => {
+  const { sessionID } = request;
+  try {
+    const sessionData = await Session.findById(sessionID);
+    if (!sessionData) return response.sendStatus(404);
+    const length = sessionData.session.cart.length;
+    return response.send({ items: length });
+  } catch (error) {
+    console.log(error);
+  }
 });
 
-cartRouter.delete("/api/cart/:id", (request, response) => {
+cartRouter.delete("/api/cart/:id", async (request, response) => {
   const { id } = request.params;
-  console.log(id);
-  const index = request.session.cart.findIndex((item) => {
-    return item._id === id;
-  });
-
-  if (index > -1) request.session.cart.splice(index, 1);
-
-  return response.sendStatus(204);
+  try {
+    const { sessionID } = request;
+    await Session.updateOne(
+      { _id: sessionID },
+      { $pull: { "session.cart": id } }
+    );
+    return response.sendStatus(204);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
-cartRouter.delete("/api/cart", (request, response) => {
-  request.session.cart = [];
-  return response.sendStatus(204);
+cartRouter.delete("/api/cart", async (request, response) => {
+  try {
+    const { sessionID } = request;
+    await Session.updateOne(
+      { _id: sessionID },
+      { $set: { "session.cart": [] } }
+    );
+    return response.sendStatus(204);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 export default cartRouter;

@@ -3,23 +3,54 @@ import mongoose from "mongoose";
 import router from "./routes/router.js";
 import cors from "cors";
 import session from "express-session";
+import MongoStore from "connect-mongo";
+import { Session } from "./mongoose/schemas/sessionSchema.js";
 import "dotenv/config";
 
 const app = express();
+
+const SESSION_LIFETIME = 30 * 60 * 1000;
+const dbURI = process.env.MONGODB_URI;
+
+mongoose
+  .connect(dbURI)
+  .then(() => console.log("Connected to Database"))
+  .catch((err) => console.log(`Error: ${err}`));
 
 app.use(
   session({
     secret: "aSuperMegaUltraTremendousSecretKey",
     resave: false,
-    saveUninitialized: false,
+    saveUninitialized: true,
     cookie: {
-      secure: true,
-      httpOnly: true,
-      sameSite: "None",
-      maxAge: 60000 * 60 * 3,
+      maxAge: SESSION_LIFETIME,
     },
+    store: MongoStore.create({
+      client: mongoose.connection.getClient(),
+      stringify: false,
+    }),
   })
 );
+
+app.use((request, response, next) => {
+  if (!request.session.cart) request.session.cart = [];
+  next();
+});
+
+app.use((request, response, next) => {
+  if (!request.session) return next();
+
+  const sessionData = {
+    _id: request.sessionID,
+    session: request.session,
+    expires: new Date(Date.now() + SESSION_LIFETIME),
+  };
+
+  const newSession = new Session(sessionData);
+  newSession.validate();
+
+  next();
+});
 
 const PORT = process.env.PORT || 3000;
 app.use(
@@ -33,15 +64,6 @@ app.use(
 
 app.use(express.json());
 app.use(router);
-
-const dbURI =
-  process.env.MONGODB_URI ||
-  "mongodb+srv://marcosdamata2000:Ma%40r32452765@cluster0.x9x2k.mongodb.net/games?retryWrites=true&w=majority";
-
-mongoose
-  .connect(dbURI)
-  .then(() => console.log("Connected to Database"))
-  .catch((err) => console.log(`Error: ${err}`));
 
 app.get("/", async (request, response) => {
   return response.send("OK");
