@@ -1,6 +1,7 @@
 import express from "express";
 import { Game } from "../mongoose/schemas/gameSchema.js";
 import { Session } from "../mongoose/schemas/sessionSchema.js";
+import mongoose from "mongoose";
 
 const cartRouter = express();
 
@@ -54,11 +55,15 @@ cartRouter.delete("/api/cart/:id", async (request, response) => {
   const { id } = request.params;
   try {
     const { sessionID } = request;
+    const sessionData = await Session.findById(sessionID);
+    const { cart } = sessionData.session;
+    const gameIndex = cart.findIndex((obj) => obj._id == id);
+    cart.splice(gameIndex, 1);
     await Session.updateOne(
       { _id: sessionID },
-      { $pull: { "session.cart": id } }
+      { $set: { "session.cart": cart } }
     );
-    return response.sendStatus(204);
+    return response.send(cart);
   } catch (error) {
     console.log(error);
   }
@@ -71,7 +76,9 @@ cartRouter.delete("/api/cart", async (request, response) => {
       { _id: sessionID },
       { $set: { "session.cart": [] } }
     );
-    return response.sendStatus(204);
+
+    const sessionData = await Session.findById(sessionID);
+    return response.send(sessionData.session.cart).status(204);
   } catch (error) {
     console.log(error);
   }

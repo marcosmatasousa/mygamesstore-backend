@@ -17,15 +17,18 @@ mongoose
   .then(() => console.log("Connected to Database"))
   .catch((err) => console.log(`Error: ${err}`));
 
+app.set("trust proxy", 1);
+
 app.use(
   session({
-    secret: "aSuperMegaUltraTremendousSecretKey",
+    secret: process.env.SECRET_KEY,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
     cookie: {
       maxAge: SESSION_LIFETIME,
+      secure: process.env.NODE_ENV === "production",
       httpOnly: true,
-      sameSite: "None",
+      sameSite: "none",
     },
     store: MongoStore.create({
       client: mongoose.connection.getClient(),
