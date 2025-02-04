@@ -1,7 +1,6 @@
 import express from "express";
 import { Game } from "../mongoose/schemas/gameSchema.js";
 import { Session } from "../mongoose/schemas/sessionSchema.js";
-import mongoose from "mongoose";
 
 const cartRouter = express();
 
@@ -26,10 +25,16 @@ cartRouter.post("/api/cart", async (request, response) => {
       return response.status(404).send({ msg: "Invalid session data" });
     try {
       const { sessionID } = request;
-      await Session.updateOne(
-        { _id: sessionID },
-        { $push: { "session.cart": item } }
+      const sessionData = await Session.findById(sessionID);
+      const isGameOnCart = sessionData.session.cart.some(
+        (obj) => obj.name === item.name
       );
+      if (!isGameOnCart) {
+        await Session.updateOne(
+          { _id: sessionID },
+          { $push: { "session.cart": item } }
+        );
+      }
       return response.sendStatus(200);
     } catch (error) {
       console.log(error);
